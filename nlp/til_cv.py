@@ -304,7 +304,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = int(15), restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1)
+        mc = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
         model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
         
