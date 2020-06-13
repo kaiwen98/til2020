@@ -77,10 +77,10 @@ def load_model():
 
 def save_model(model):
     model_json = model.to_json()
-    with open(model_file, "w") as json_file:
+    with open("model_cv.json", "w") as json_file:
         json_file.write(model_json)
     # serialize weights to HDF5
-    model.save_weights(weights_file)
+    model.save_weights("model_cv.h5")
     print("Saved model to disk")
 
 def schedule(ind):
@@ -101,11 +101,12 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     print(max_features)
     maxlen = 200
     embed_size = 100
- 
+    train = shuffle(train)
     X_train = train["word_representation"].fillna("fillna").values
     y_train = train[["outwear", "top", "trousers", "women dresses", "women skirts"]].values
     X_test = test["word_representation"].fillna("fillna").values    
     y_test = test[["outwear", "top", "trousers", "women dresses", "women skirts"]].values
+    y_test = y_test.tolist()
     print('preprocessing start')
     tokenizer = text.Tokenizer(num_words=max_features)
     tokenizer.fit_on_texts(list(X_train) + list(X_test))
@@ -136,7 +137,8 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     #wrote out all the blocks instead of looping for simplicity
 
 
-   
+    
+    
     filter_nr = 64
     filter_size = 3
     max_pool_size = 3
@@ -248,34 +250,35 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     output = Dropout(dense_dropout)(output)
     output = Dense(5, activation='sigmoid')(output)
     
-    # model = Model(comment, output)
+    #model = Model(comment, output)
     # print("Correct model: ", type(model))
     
     model.compile(loss='binary_crossentropy', 
             optimizer=optimizers.Adam(),
             metrics=['accuracy'])
     
-                
-    batch_size = 128
-    epochs = 4
+    num_folds = 5
+    kfold = KFold(n_splits=num_folds, shuffle=True)
+    for train, test in kfold.split(x_train, y_train):
 
-    Xtrain, Xval, ytrain, yval = train_test_split(x_train, y_train, train_size=0.95, random_state=233)
-    lr = callbacks.LearningRateScheduler(schedule)
-    ra_val = RocAucEvaluation(validation_data=(Xval, yval), interval = 1)
-    model.fit(Xtrain, ytrain, batch_size=batch_size, epochs=epochs, validation_data=(Xval, yval), callbacks = [lr, ra_val] ,verbose = 0)
+        batch_size = 128
+        epochs = 4
+        lr = callbacks.LearningRateScheduler(schedule)
+        ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
+        model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val] ,verbose = 1)
 
-    
-    y_pred = model.predict(x_test)
-    y_pred = [[1 if i > 0.5 else 0 for i in r] for r in y_pred]
-    y_test = y_test.tolist()
-    accuracy = sum([y_pred[i] == y_test[i] for i in range(len(y_pred))])/len(y_pred) * 100
-    print([y_pred[i] == y_test[i] for i in range(len(y_pred))])
-    print(accuracy, "%")
-    """
-    submission = pd.read_csv('../input/jigsaw-toxic-comment-classification-challenge/sample_submission.csv')
-    submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_pred
-    submission.to_csv('dpcnn_test_preds.csv', index=False)
-    """
+        
+        y_pred = model.predict(x_test)
+        y_pred = [[1 if i > 0.5 else 0 for i in r] for r in y_pred]
+        
+        accuracy = sum([y_pred[i] == y_test[i] for i in range(len(y_pred))])/len(y_pred) * 100
+        print([y_pred[i] == y_test[i] for i in range(len(y_pred))])
+        print(accuracy, "%")
+        """
+        submission = pd.read_csv('../input/jigsaw-toxic-comment-classification-challenge/sample_submission.csv')
+        submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_pred
+        submission.to_csv('dpcnn_test_preds.csv', index=False)
+        """
     return model
 
 # %% [code] {"scrolled:true"}
