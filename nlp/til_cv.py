@@ -16,11 +16,11 @@ from keras import backend as K
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
-from keras.models import Model, model_from_json
+from keras.models import Model, model_from_json, load_model
 from keras.layers import Input, Dense, Embedding, MaxPooling1D, Conv1D, SpatialDropout1D
 from keras.layers import add, Dropout, PReLU, BatchNormalization, GlobalMaxPooling1D
 from keras.preprocessing import text, sequence
-from keras.callbacks import Callback
+from keras.callbacks import Callback, EarlyStopping, ModelCheckpoint
 from keras import optimizers
 from keras import initializers, regularizers, constraints, callbacks
 from sklearn.utils import shuffle
@@ -31,10 +31,36 @@ from keras.utils.generic_utils import get_custom_objects
 import tensorflow as tf
 
 EMBEDDING_FILE = './input/word_embeddings.pkl'
-#model_file = 'model_cv.json'
-model_file = 'model1.json'
-#weights_file = 'model_cv.h5'
-weights_file = 'model1.h5'
+s_model_file = 'model_cv1.json'
+model_file = 'model_cv.json'
+s_weights_file = 'model_cv1.h5'
+weights_file = 'model_cv.h5'
+
+def f1(y_pred0, y_test0):
+    TP = 0.0
+    FP = 0.0
+    FN = 0.0
+    TN = 0.0
+    y_pred = [item for sublist in y_pred0 for item in sublist]
+    y_test = [item for sublist in y_test0 for item in sublist]
+    print(y_pred)
+    print(y_test)
+    for i in range(len(y_pred)):
+        if y_pred[i] == 0: 
+            if y_test[i] == 0: 
+                TN += 1
+            else:
+                FN += 1
+        else:
+            if y_test[i] == 0: 
+                FP += 1
+            else: 
+                TP += 1
+    
+    print("FP: ", FP,"  TP: ", TP,"  FN: ", FN, " TN: ", TN)
+    precision = TP /(TP + FP)
+    recall = TP/(TP+FN)
+    return float(2 * precision * recall / (precision + recall))
 
 
 def swish(x, beta = 1): return (x * sigmoid(beta*x))
@@ -58,7 +84,7 @@ def extract_embed(fd):
     all_embs = np.stack(embeddings_index.values())
     return all_embs.mean(), all_embs.std(), embeddings_index
 
-def load_model():
+def _load_model():
     # load json and create model
     json_file = open(model_file, 'r')
     loaded_model_json = json_file.read()
@@ -75,17 +101,26 @@ def load_model():
     print("Loaded model from disk")
     return model
 
-def save_model(model):
+def _save_model(model):
     model_json = model.to_json()
-    with open("model_cv.json", "w") as json_file:
+    with open('model_cv1.json', 'w') as json_file:
         json_file.write(model_json)
     # serialize weights to HDF5
-    model.save_weights("model_cv.h5")
+    model.save_weights(s_weights_file)
     print("Saved model to disk")
-
+"""
 def schedule(ind):
     a = [0.001, 0.0005, 0.0001, 0.0001]
     return a[ind] 
+"""
+
+def schedule(epoch):
+    if epoch < 10:
+        return float(0.001)
+    else:
+        return float(0.001*tf.math.exp(-0.1))
+
+
 
 #straightfoward preprocess
 
@@ -258,15 +293,21 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
             metrics=['accuracy'])
     
     num_folds = 5
+    num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
+    
     for train, test in kfold.split(x_train, y_train):
-
+    
+        print("Training Fold number: ", num)
         batch_size = 128
-        epochs = 4
+        epochs = 20
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
-        model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val] ,verbose = 1)
-
+        es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = int(15), restore_best_weights = True, mode = 'min')
+        mc = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1)
+        model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
+        num += 1
+        
         
         y_pred = model.predict(x_test)
         y_pred = [[1 if i > 0.5 else 0 for i in r] for r in y_pred]
@@ -274,11 +315,14 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         accuracy = sum([y_pred[i] == y_test[i] for i in range(len(y_pred))])/len(y_pred) * 100
         print([y_pred[i] == y_test[i] for i in range(len(y_pred))])
         print(accuracy, "%")
+        print(f1(y_pred, y_test))
+        
         """
         submission = pd.read_csv('../input/jigsaw-toxic-comment-classification-challenge/sample_submission.csv')
         submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_pred
         submission.to_csv('dpcnn_test_preds.csv', index=False)
         """
+    
     return model
 
 # %% [code] {"scrolled:true"}
@@ -287,9 +331,9 @@ if __name__ == "__main__":
     start = 0
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
     while(start<1):
-        model = load_model()
+        model = load_model('best_model.h5')
         model = classifier(model,emb_mean, emb_std, embeddings_index)
-        save_model(model)
+        _save_model(model)
         start = start + 1
 
 
