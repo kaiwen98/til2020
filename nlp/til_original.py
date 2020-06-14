@@ -135,6 +135,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     maxlen = 200
     embed_size = 100
     train = shuffle(train)
+    test = shuffle(test)
     X_train = train["word_representation"].fillna("fillna").values
     y_train = train[["outwear", "top", "trousers", "women dresses", "women skirts"]].values
     X_test = test["word_representation"].fillna("fillna").values    
@@ -302,7 +303,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 3, restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model_original1.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
+        mc = ModelCheckpoint('best_model_original2.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
         #model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
         
@@ -328,8 +329,18 @@ if __name__ == "__main__":
     global embedding_index
     start = 0
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
-    while(start<3):
-        model = load_model('best_model.h5')
+    while(start<5):
+        print("--------------1---------------")
+        model = load_model('best_model_original2.h5')
+        model = classifier(model,emb_mean, emb_std, embeddings_index)
+        #_save_model(model)
+        start = start + 1
+    
+    start = 0
+    
+    while(start<5):
+        print("--------------2---------------")
+        model = load_model('best_model_original2.h5')
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1

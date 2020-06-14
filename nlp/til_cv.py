@@ -285,14 +285,14 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     output = Dropout(dense_dropout)(output)
     output = Dense(5, activation='sigmoid')(output)
     
-    #model = Model(comment, output)
+    model = Model(comment, output)
     # print("Correct model: ", type(model))
     
     model.compile(loss='binary_crossentropy', 
             optimizer=optimizers.Adam(),
             metrics=['accuracy'])
     
-    num_folds = 5
+    num_folds = 15
     num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
@@ -303,8 +303,8 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         epochs = 20
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
-        es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = int(15), restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
+        es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 3, restore_best_weights = True, mode = 'min')
+        mc = ModelCheckpoint('best_model_cv.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
         model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
         
@@ -333,7 +333,7 @@ if __name__ == "__main__":
     while(start<1):
         model = load_model('best_model.h5')
         model = classifier(model,emb_mean, emb_std, embeddings_index)
-        _save_model(model)
+        #_save_model(model)
         start = start + 1
 
 
