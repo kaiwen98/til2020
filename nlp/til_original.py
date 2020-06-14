@@ -331,7 +331,7 @@ if __name__ == "__main__":
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
     while(start<5):
         print("--------------1---------------")
-        model = load_model('best_model_original2.h5')
+        model = load_model('best_model_cv.h5')
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1

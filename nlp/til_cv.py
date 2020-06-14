@@ -285,7 +285,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     output = Dropout(dense_dropout)(output)
     output = Dense(5, activation='sigmoid')(output)
     
-    model = Model(comment, output)
+    #model = Model(comment, output)
     # print("Correct model: ", type(model))
     
     model.compile(loss='binary_crossentropy', 
@@ -331,7 +331,7 @@ if __name__ == "__main__":
     start = 0
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
     while(start<1):
-        model = load_model('best_model.h5')
+        model = load_model('best_model_cv.h5')
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
