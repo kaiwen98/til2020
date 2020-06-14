@@ -1,11 +1,9 @@
 from __future__ import absolute_import, division
 
 import tensorflow as tf
-from keras.layers import Dense, Input, Embedding, Lambda, Dropout, Activation, SpatialDropout1D, Reshape, GlobalAveragePooling1D, Flatten, Bidirectional, CuDNNGRU, add, Conv1D, GlobalMaxPooling1D
-from keras.layers import concatenate
 from keras import optimizers
 from keras import initializers
-from keras.layers import InputSpec, Layer
+from keras.layers import InputSpec, Layer, LSTM
 
 import os
 import gc
@@ -29,7 +27,7 @@ from keras.callbacks import Callback, EarlyStopping, ModelCheckpoint
 from keras import optimizers
 from keras import initializers, regularizers, constraints, callbacks
 from sklearn.utils import shuffle
-from keras.optimizers import Adam, SGD
+from tensorflow.compat.v1.keras.optimizers import Adam, SGD
 from keras.backend import sigmoid
 from keras.utils import get_custom_objects
 from keras.layers import concatenate
@@ -202,35 +200,23 @@ def DPCNN(maxlen,max_features, embed_size, embedding_matrix):
     return model
 
 
-def get_av_pos_rnn(maxlen,max_features, embed_size, embedding_matrix):
+def rcnn(maxlen,max_features, embed_size, embedding_matrix):
     train_embed = False
-    recurrent_units = 60
+
     comment = Input(shape = (maxlen,))
     embedding_comment = Embedding(max_features, embed_size, input_length = maxlen, weights=[embedding_matrix], trainable=train_embed)(comment)
-    embedding_layer = SpatialDropout1D(0.25)(embedding_comment)
-    
-    rnn_1 = Bidirectional(CuDNNGRU(recurrent_units, return_sequences=True))(embedding_layer)
-    rnn_2 = Bidirectional(CuDNNGRU(recurrent_units, return_sequences=True))(rnn_1)
-    x = Concatenate(axis = 2)([rnn_1, rnn_2])
-
-    last = Lambda(lambda t: t[:, -1], name='last')(x)
-    maxpool = GlobalMaxPooling1D()(x)
-    attn = AttentionWeightedAverage()(x)
-    attn = Lambda(lambda t: K.sum(t, axis=1, keepdims = False))(x)
-    print("wtfattn: ", K.int_shape(attn))
-    average = GlobalAveragePooling1D()(x)
-    
-    print("wtflast: ", K.int_shape(last))
-    print("wtfmax: ", K.int_shape(maxpool))
-    
-    print("wtfglbavg: ", K.int_shape(average))
-    all_views = Concatenate(axis = 1)([last, maxpool, average, attn])
-    x = Dropout(0.5)(all_views)
-    x = Dense(144, activation="relu")(x)
-    output_layer = Dense(5, activation="sigmoid")(x)
-    model = Model(inputs=comment, outputs=output_layer)
-    adam_optimizer = optimizers.Adam(lr=1e-3, decay=1e-6, clipvalue=5)
-    model.compile(loss='binary_crossentropy', optimizer=adam_optimizer, metrics=['accuracy'])
-    model.summary()
+    x_context = Bidirectional(LSTM(128, return_sequences=True))(embedding_comment)
+    x = Concatenate()([embedding_comment, x_context])
+    convs = []
+    for kernel_size in [1,2,3,4,5]:
+        conv = Conv1D(128, kernel_size, activation = 'relu')(x)
+        convs.append(conv)
+    poolings = [GlobalAveragePooling1D()(conv) for conv in convs] + [GlobalMaxPooling1D()(conv) for conv in convs]
+    x = Concatenate()(poolings)
+    output = Dense(5, activation = "softmax")(x)
+    model = Model(comment, output)
+    model.compile(loss='binary_crossentropy', 
+    optimizer=optimizers.Adam(),
+    metrics=['accuracy'])
     return model
 

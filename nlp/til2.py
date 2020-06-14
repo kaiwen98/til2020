@@ -12,7 +12,7 @@ from keras import optimizers
 from keras import initializers
 from keras.layers import InputSpec, Layer
 from keras import backend as K
-
+import keras
 import os
 import gc
 import numpy as np
@@ -184,7 +184,8 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     #wrote out all the blocks instead of looping for simplicity
 
 
-    model = models.get_av_pos_rnn(maxlen, max_features, embed_size, embedding_matrix)
+    model = models.rcnn(maxlen, max_features, embed_size, embedding_matrix)
+    print(type(model))
     #model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
     """
     filter_nr = 64
