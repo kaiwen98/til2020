@@ -185,128 +185,10 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
 
 
     model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
+    #model.load_weights('best_model_dpcnnrcnn.h5')
     print(type(model))
     #model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
-    """
-    filter_nr = 64
-    filter_size = 3
-    max_pool_size = 3
-    max_pool_strides = 2
-    dense_nr = 256
-    spatial_dropout = 0.2
-    dense_dropout = 0.5
-    train_embed = False
-    conv_kern_reg = regularizers.l2(0.00001)
-    conv_bias_reg = regularizers.l2(0.00001)
-    
-    comment = Input(shape=(maxlen,))
-    emb_comment = Embedding(max_features, embed_size, weights=[embedding_matrix], trainable=train_embed)(comment)
-    emb_comment = SpatialDropout1D(spatial_dropout)(emb_comment)
-
-    block1 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(emb_comment)
-    block1 = BatchNormalization()(block1)
-    block1 = PReLU()(block1)
-    block1 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block1)
-    block1 = BatchNormalization()(block1)
-    block1 = PReLU()(block1)
-
-    #we pass embedded comment through conv1d with filter size 1 because it needs to have the same shape as block output
-    #if you choose filter_nr = embed_size (300 in this case) you don't have to do this part and can add emb_comment directly to block1_output
-    resize_emb = Conv1D(filter_nr, kernel_size=1, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(emb_comment)
-    resize_emb = PReLU()(resize_emb)
-        
-    block1_output = add([block1, resize_emb])
-    block1_output = MaxPooling1D(pool_size=max_pool_size, strides=max_pool_strides)(block1_output)
-
-    block2 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block1_output)
-    block2 = BatchNormalization()(block2)
-    block2 = PReLU()(block2)
-    block2 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block2)
-    block2 = BatchNormalization()(block2)
-    block2 = PReLU()(block2)
-        
-    block2_output = add([block2, block1_output])
-    block2_output = MaxPooling1D(pool_size=max_pool_size, strides=max_pool_strides)(block2_output)
-
-    block3 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block2_output)
-    block3 = BatchNormalization()(block3)
-    block3 = PReLU()(block3)
-    block3 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block3)
-    block3 = BatchNormalization()(block3)
-    block3 = PReLU()(block3)
-        
-    block3_output = add([block3, block2_output])
-    block3_output = MaxPooling1D(pool_size=max_pool_size, strides=max_pool_strides)(block3_output)
-
-    block4 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block3_output)
-    block4 = BatchNormalization()(block4)
-    block4 = PReLU()(block4)
-    block4 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block4)
-    block4 = BatchNormalization()(block4)
-    block4 = PReLU()(block4)
-
-    block4_output = add([block4, block3_output])
-    block4_output = MaxPooling1D(pool_size=max_pool_size, strides=max_pool_strides)(block4_output)
-
-    block5 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block4_output)
-    block5 = BatchNormalization()(block5)
-    block5 = PReLU()(block5)
-    block5 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block5)
-    block5 = BatchNormalization()(block5)
-    block5 = PReLU()(block5)
-
-    block5_output = add([block5, block4_output])
-    block5_output = MaxPooling1D(pool_size=max_pool_size, strides=max_pool_strides)(block5_output)
-
-    block6 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block5_output)
-    block6 = BatchNormalization()(block6)
-    block6 = PReLU()(block6)
-    block6 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block6)
-    block6 = BatchNormalization()(block6)
-    block6 = PReLU()(block6)
-
-    block6_output = add([block6, block5_output])
-    block6_output = MaxPooling1D(pool_size=max_pool_size, strides=max_pool_strides)(block6_output)
-
-    block7 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block6_output)
-    block7 = BatchNormalization()(block7)
-    block7 = PReLU()(block7)
-    block7 = Conv1D(filter_nr, kernel_size=filter_size, padding='same', activation='linear', 
-                kernel_regularizer=conv_kern_reg, bias_regularizer=conv_bias_reg)(block7)
-    block7 = BatchNormalization()(block7)
-    block7 = PReLU()(block7)
-
-    block7_output = add([block7, block6_output])
-    output = GlobalMaxPooling1D()(block7_output)
-
-    output = Dense(dense_nr, activation='linear')(output)
-    output = BatchNormalization()(output)
-    output = PReLU()(output)
-    output = Dropout(dense_dropout)(output)
-    output = Dense(5, activation='sigmoid')(output)
-    
-    model = Model(comment, output)
-    
-    # print("Correct model: ", type(model))
-    
-    model.compile(loss='binary_crossentropy', 
-            optimizer=optimizers.Adam(),
-            metrics=['accuracy'])
-    """
+   
     num_folds = 15
     num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
@@ -319,7 +201,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 3, restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model_dpcnnrcnn.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
+        mc = ModelCheckpoint('best_model_dpcnnrcnn.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only = True)
         model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
         
@@ -346,7 +228,6 @@ if __name__ == "__main__":
     start = 0
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
     while(start<1):
-        model = load_model('best_model.h5')
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
