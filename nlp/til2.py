@@ -5,7 +5,7 @@
 #Try to improve score on your own local pc or throw it in the blender with the rest of them :)
 # %% [code] {"scrolled:true"}
 from __future__ import absolute_import, division
-
+import math
 import tensorflow as tf
 from keras.layers import Dense, Input, Embedding, Lambda, Dropout, Activation, SpatialDropout1D, Reshape, GlobalAveragePooling1D, Flatten, Bidirectional, CuDNNGRU, add, Conv1D, GlobalMaxPooling1D
 from keras import optimizers
@@ -130,7 +130,7 @@ def schedule(epoch):
     if epoch < 10:
         return float(0.001)
     else:
-        return float(0.001*tf.math.exp(-0.1))
+        return float(0.001*math.exp(-0.2))
 
 
 
@@ -184,7 +184,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     #wrote out all the blocks instead of looping for simplicity
 
 
-    model = models.rcnn(maxlen, max_features, embed_size, embedding_matrix)
+    model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
     print(type(model))
     #model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
     """
@@ -315,11 +315,11 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     
         print("Training Fold number: ", num)
         batch_size = 128
-        epochs = 20
+        epochs = 8
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 3, restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model_cv.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
+        mc = ModelCheckpoint('best_model_dpcnnrcnn.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
         model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
         

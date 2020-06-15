@@ -3,7 +3,7 @@ from __future__ import absolute_import, division
 import tensorflow as tf
 from keras import optimizers
 from keras import initializers
-from keras.layers import InputSpec, Layer, LSTM
+from keras.layers import InputSpec, Layer, LSTM, GRU
 
 import os
 import gc
@@ -205,11 +205,11 @@ def rcnn(maxlen,max_features, embed_size, embedding_matrix):
 
     comment = Input(shape = (maxlen,))
     embedding_comment = Embedding(max_features, embed_size, input_length = maxlen, weights=[embedding_matrix], trainable=train_embed)(comment)
-    x_context = Bidirectional(LSTM(128, return_sequences=True))(embedding_comment)
+    x_context = Bidirectional(GRU(128, return_sequences=True))(embedding_comment)
     x = Concatenate()([embedding_comment, x_context])
     convs = []
     for kernel_size in [1,2,3,4,5]:
-        conv = Conv1D(128, kernel_size, activation = 'relu')(x)
+        conv = Conv1D(64, kernel_size, activation = 'relu')(x)
         convs.append(conv)
     poolings = [GlobalAveragePooling1D()(conv) for conv in convs] + [GlobalMaxPooling1D()(conv) for conv in convs]
     x = Concatenate()(poolings)
@@ -218,5 +218,33 @@ def rcnn(maxlen,max_features, embed_size, embedding_matrix):
     model.compile(loss='binary_crossentropy', 
     optimizer=optimizers.Adam(),
     metrics=['accuracy'])
+    print(model.summary())
     return model
+
+
+def rcnn1(maxlen,max_features, embed_size, embedding_matrix):
+    train_embed = False
+
+    comment = Input(shape = (maxlen,))
+    embedding_comment = Embedding(max_features, embed_size, input_length = maxlen, weights=[embedding_matrix], trainable=train_embed)(comment)
+    embedding_comment = SpatialDropout1D(0.2)(embedding_comment)
+    rnn_1 = Bidirectional(LSTM(64, return_sequences=True))(embedding_comment)
+
+    conv_2 = Conv1D(128, 2, kernel_initializer="normal", padding="valid", activation="relu", strides=1)(rnn_1)
+    maxpool = GlobalMaxPooling1D()(conv_2)
+    attn = AttentionWeightedAverage()(conv_2)
+    attn = Lambda(lambda t: K.sum(t, axis=1))(attn)
+    average = GlobalAveragePooling1D()(conv_2)
+
+    concatenated = Concatenate(axis = 1)([maxpool, attn, average])
+    x = Dropout(0.5)(concatenated)
+    x = Dense(120, activation="relu")(x)
+    output_layer = Dense(5, activation="sigmoid")(x)
+
+    model = Model(inputs=comment, outputs=output_layer)
+    adam_optimizer = optimizers.Adam(lr=1e-3, clipvalue=5, decay=1e-5)
+    model.compile(loss='binary_crossentropy', optimizer=adam_optimizer, metrics=['accuracy'])
+    model.summary()
+    return model
+  
 

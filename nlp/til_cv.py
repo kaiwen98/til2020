@@ -4,6 +4,7 @@
 #Got it to PLB 0.984 with 10fold cv on local computer after playing with parameters
 #Try to improve score on your own local pc or throw it in the blender with the rest of them :)
 # %% [code] {"scrolled:true"}
+import math
 import os
 import gc
 import numpy as np
@@ -115,10 +116,10 @@ def schedule(ind):
 """
 
 def schedule(epoch):
-    if epoch < 10:
+    if epoch < 3:
         return float(0.001)
     else:
-        return float(0.001*tf.math.exp(-0.1))
+        return float(0.001*math.exp(-0.2))
 
 
 
@@ -285,7 +286,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     output = Dropout(dense_dropout)(output)
     output = Dense(5, activation='sigmoid')(output)
     
-    #model = Model(comment, output)
+    model = Model(comment, output)
     # print("Correct model: ", type(model))
     
     model.compile(loss='binary_crossentropy', 
@@ -304,7 +305,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 3, restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model_cv.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
+        mc = ModelCheckpoint('best_model_cv1.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True)
         model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
         
