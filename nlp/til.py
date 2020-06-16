@@ -91,11 +91,16 @@ def extract_embed(fd):
         embeddings_index = pickle.load(f)
     all_embs = np.stack(embeddings_index.values())
     return all_embs.mean(), all_embs.std(), embeddings_index
-
+"""
 def schedule(ind):
     a = [0.001, 0.0005, 0.0001, 0.0001, 0.00005, 0.00005]
     return a[ind] 
+"""
 
+def schedule(epochs):
+    ans = 0.001 * exp(-0.3*epochs)
+    print("epochs: ", ans)
+    return ans
 #straightfoward preprocess
 
 # %% [code] {"scrolled:true"}
@@ -148,7 +153,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     
         print("Training Fold number: ", num)
         batch_size = 128
-        epochs = 6
+        epochs = 20
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 2, restore_best_weights = True, mode = 'min')
