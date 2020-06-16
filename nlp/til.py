@@ -98,7 +98,7 @@ def schedule(ind):
 """
 
 def schedule(epochs):
-    ans = 0.001 * exp(-0.3*epochs)
+    ans = 0.001 * math.exp(-0.3*epochs)
     print("epochs: ", ans)
     return ans
 #straightfoward preprocess
