@@ -169,7 +169,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
 # %% [code] {"scrolled:true"}
 if __name__ == "__main__":
     global embedding_index
-    start = 0
+    start = 3
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
     while(start<5):
         model = 'ensemble_dpcnn_' + str(start) 
