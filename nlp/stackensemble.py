@@ -146,7 +146,7 @@ def gauge_acc(y_pred, y_test):
     return f1(y_pred,y_test)
 
 # %% [code] {"scrolled:true"}
-def classifier(model, emb_mean, emb_std, embeddings_index):
+def classifier(model_name, emb_mean, emb_std, embeddings_index):
     max_features = 4248
     maxlen = 200
     embed_size = 100
@@ -165,14 +165,21 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         if i >= max_features: continue
         embedding_vector = embeddings_index.get(word)
         if embedding_vector is not None: embedding_matrix[i-1] = embedding_vector
-
-    num_models = 3
+    
+    num_models_rcnn = 5
+    num_models_dpcnn = 5
+    num_models = num_models_rcnn + num_models_dpcnn
 
     print('preprocessing done')
     members = []
-    for i in range(num_models): 
+    for i in range(num_models_rcnn): 
         model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
-        model.load_weights('best_model_rcnn_model2.h5') 
+        model.load_weights('ensemble_rcnn_'+str(i)) 
+        members.append(model)
+
+    for i in range(num_models_dpcnn): 
+        model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
+        model.load_weights('ensemble_dpcnn_'+str(i)) 
         members.append(model)
     
     for i in range(len(members)):
@@ -198,6 +205,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     
     num_folds = 8
     num = 0
+    numod = 1
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
     for train, test in kfold.split(x_train, y_train):
@@ -208,28 +216,30 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         ypred_arr = [model.predict(x_test) for model in members]
         for x in ypred_arr:
             x = [[1 if i > 0.5 else 0 for i in r] for r in x] 
+            print("model "+ str(numod) +" used")
             gauge_acc(x, y_test)
+            numod += 1
 
         
         yhat = array(ypred_arr)
         y_pred = np.mean(yhat, axis = 0)
-        
+        """
         inputX = [x_train[train] for i in range(num_models)]
         testX = [x_train[test] for i in range(num_models)]
         unseenX = [x_test for i in range(num_models)]
-        
+        """
         """
         batch_size = 128
         epochs = 4
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(unseenX, y_test), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 2, restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model_rcnn_test3.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only = True)
+        mc = ModelCheckpoint(model_name, monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only = True)
         inputY = y_train[train]
         #supermodel.fit(inputX, inputY, epochs=epochs, batch_size = batch_size, validation_data=(testX, y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         """
         #y_pred = supermodel.predict(unseenX)
-       
+        print("Ensemble prediction: ")
         y_pred = [[1 if i > 0.5 else 0 for i in r] for r in y_pred]
         
         accuracy = sum([y_pred[i] == y_test[i] for i in range(len(y_pred))])/len(y_pred) * 100
@@ -249,9 +259,8 @@ if __name__ == "__main__":
     modelcat = []
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
 
-    model = load_model('best_model_original.h5')
-    for i in range(5):
-        model = classifier(model,emb_mean, emb_std, embeddings_index)
+    model_name = "ensemble_complete.h5"
+    model = classifier(model_name,emb_mean, emb_std, embeddings_index)
        
     
     

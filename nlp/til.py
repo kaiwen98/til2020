@@ -140,7 +140,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
 
     model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
 
-    num_folds = 8
+    num_folds = 15
     num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
@@ -169,10 +169,10 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
 # %% [code] {"scrolled:true"}
 if __name__ == "__main__":
     global embedding_index
-    start = 2
+    start = 1
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
-    while(start<3):
-        model = 'ensemble_dpcnn_' + str(start) 
+    while(start<2):
+        model = 'test_ensemble_dpcnn_' + str(start) 
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
