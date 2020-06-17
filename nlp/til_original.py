@@ -27,7 +27,7 @@ from sklearn.utils import shuffle
 from tensorflow.compat.v1.keras.optimizers import Adam, SGD
 from keras.backend import sigmoid
 from keras.utils.generic_utils import get_custom_objects
-
+import models
 import tensorflow as tf
 
 EMBEDDING_FILE = './input/word_embeddings.pkl'
@@ -125,7 +125,7 @@ def schedule(ind):
 
 
 # %% [code] {"scrolled:true"}
-def classifier(model, emb_mean, emb_std, embeddings_index):
+def classifier(model_name, emb_mean, emb_std, embeddings_index):
     train = pd.read_csv('./input/TIL_NLP_train1_dataset.csv')
     test = pd.read_csv('./input/TIL_NLP_unseen_dataset.csv')
     print('running classifier')
@@ -183,6 +183,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     train_embed = False
     conv_kern_reg = regularizers.l2(0.00001)
     conv_bias_reg = regularizers.l2(0.00001)
+
     
     comment = Input(shape=(maxlen,))
     emb_comment = Embedding(max_features, embed_size, weights=[embedding_matrix], trainable=train_embed)(comment)
@@ -283,7 +284,9 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     output = PReLU()(output)
     output = Dropout(dense_dropout)(output)
     output = Dense(5, activation='sigmoid')(output)
-    
+
+    model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
+    model.load_weights(model_name)
     #model = Model(comment, output)
     # print("Correct model: ", type(model))
     
@@ -327,11 +330,12 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
 # %% [code] {"scrolled:true"}
 if __name__ == "__main__":
     global embedding_index
-    start = 3
+    start = 2
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
     while(start<5):
         print("--------------1---------------")
-        model = load_model('best_model_rcnn_model1.h5')
+        
+        model = 'ensemble_dpcnn_1'
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
@@ -340,7 +344,8 @@ if __name__ == "__main__":
     
     while(start<5):
         print("--------------2---------------")
-        model = load_model('best_model_rcnn_model1.h5')
+      
+        model = 'test_ensemble_dpcnn_1'
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
