@@ -201,7 +201,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     
     
     supermodel = Model(input = supermodel_input, output = output)
-    #supermodel.load_weights('best_model_rcnn_test3.h5')
+    supermodel.load_weights('ensemble_complete.h5')
     adam_optimizer = optimizers.Adam(lr=1e-3, clipvalue=5, decay=1e-5)
     supermodel.compile(loss='binary_crossentropy', optimizer=adam_optimizer, metrics=['accuracy'])
     
@@ -213,10 +213,10 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
     for train, test in kfold.split(x_train, y_train):
-        #x_test, y_test = datagen(d_train, d_test, gen_test = True)
+        x_test, y_test = datagen(d_train, d_test, gen_test = True)
         print("Training Fold number: ", num)
         num += 1
-        """
+        
         ypred_arr = [model.predict(x_test) for model in members]
         for x in ypred_arr:
             x = [[1 if i > 0.5 else 0 for i in r] for r in x] 
@@ -224,7 +224,8 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
             gauge_acc(x, y_test)
             numod += 1
 
-        
+        numod = 0
+        """
         yhat = array(ypred_arr)
         y_pred = np.mean(yhat, axis = 0)
         """
@@ -240,7 +241,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 2, restore_best_weights = True, mode = 'min')
         mc = ModelCheckpoint(model_name, monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only = True)
         inputY = y_train[train]
-        supermodel.fit(inputX, inputY, epochs=epochs, batch_size = batch_size, validation_data=(testX, y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
+        #supermodel.fit(inputX, inputY, epochs=epochs, batch_size = batch_size, validation_data=(testX, y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         
         y_pred = supermodel.predict(unseenX)
         print("Ensemble prediction: ")
@@ -263,7 +264,7 @@ if __name__ == "__main__":
     modelcat = []
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
 
-    model_name = "ensemble_complete.h5"
+    model_name = "ensemble_complete1.h5"
     model = classifier(model_name,emb_mean, emb_std, embeddings_index)
        
     

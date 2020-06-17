@@ -145,7 +145,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
 
     model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
 
-    num_folds = 15
+    num_folds = 20
     num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
@@ -153,7 +153,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     
         print("Training Fold number: ", num)
         batch_size = 128
-        epochs = 20
+        epochs = 25
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 5, restore_best_weights = True, mode = 'min')
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     start = 1
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
     while(start<2):
-        model = 'test_ensemble_dpcnn_' + str(start) 
+        model = 'test_ensemble_dpcnn_2' 
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
