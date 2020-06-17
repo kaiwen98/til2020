@@ -244,7 +244,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
         inputX = [x_train[train] for i in range(num_models)]
         testX = [x_train[test] for i in range(num_models)]
         unseenX = [x_test for i in range(num_models)]
-      
+        inputY = y_train[train]
  
         batch_size = 128
         epochs = 4
