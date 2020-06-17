@@ -192,8 +192,11 @@ def DPCNN(maxlen,max_features, embed_size, embedding_matrix):
     output = PReLU()(output)
     output = Dropout(dense_dropout)(output)
     output = Dense(5, activation='sigmoid')(output)
-    
-    model = Model(comment, output)
+
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+
+    with mirrored_strategy.scope():
+        model = Model(comment, output)
     model.compile(loss='binary_crossentropy', 
         optimizer=optimizers.Adam(),
         metrics=['accuracy'])
@@ -214,7 +217,10 @@ def rcnn(maxlen,max_features, embed_size, embedding_matrix):
     poolings = [GlobalAveragePooling1D()(conv) for conv in convs] + [GlobalMaxPooling1D()(conv) for conv in convs]
     x = Concatenate()(poolings)
     output = Dense(5, activation = "softmax")(x)
-    model = Model(comment, output)
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+
+    with mirrored_strategy.scope():
+        model = Model(comment, output)
     model.compile(loss='binary_crossentropy', 
     optimizer=optimizers.Adam(),
     metrics=['accuracy'])
