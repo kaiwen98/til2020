@@ -285,7 +285,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     output = Dropout(dense_dropout)(output)
     output = Dense(5, activation='sigmoid')(output)
 
-    model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
+    model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
     model.load_weights(model_name)
     #model = Model(comment, output)
     # print("Correct model: ", type(model))
@@ -335,7 +335,7 @@ if __name__ == "__main__":
     while(start<5):
         print("--------------1---------------")
         
-        model = 'ensemble_dpcnn_1'
+        model = 'ensemble_rcnn_1'
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
@@ -343,14 +343,14 @@ if __name__ == "__main__":
     start = 0
     
     while(start<5):
-        print("--------------3---------------")
+        print("--------------2---------------")
       
-        model = 'test_ensemble_dpcnn_1'
+        model = 'test_ensemble_rcnn_1'
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
     start = 0
-    
+    """
     while(start<5):
         print("--------------2---------------")
       
@@ -358,7 +358,7 @@ if __name__ == "__main__":
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
-
+    """
         #WINNER
 
 

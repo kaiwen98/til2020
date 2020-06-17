@@ -174,10 +174,10 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
 # %% [code] {"scrolled:true"}
 if __name__ == "__main__":
     global embedding_index
-    start = 1
+    start = 0
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
-    while(start<2):
-        model = 'test_ensemble_rcnn_' + str(start) 
+    while(start<5):
+        model = 'final_ensemble_rcnn_' + str(start) 
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
