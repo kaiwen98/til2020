@@ -174,13 +174,18 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     members = []
     for i in range(num_models_rcnn): 
         model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
-        model.load_weights('ensemble_rcnn_'+str(i)) 
+        model.load_weights('final_ensemble_rcnn_'+str(i)) 
         members.append(model)
 
-    for i in range(num_models_dpcnn): 
+    for i in range(int(num_models_dpcnn)): 
+        model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
+        model.load_weights('final_ensemble_dpcnn_'+str(i)) 
+        members.append(model)
+        """
         model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
         model.load_weights('ensemble_dpcnn_'+str(i)) 
         members.append(model)
+        """
     
     for i in range(len(members)):
 	    model = members[i]
@@ -201,7 +206,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     
     
     supermodel = Model(input = supermodel_input, output = output)
-    supermodel.load_weights('ensemble_complete.h5')
+    #supermodel.load_weights('final_ensemble_complete.h5')
     adam_optimizer = optimizers.Adam(lr=1e-3, clipvalue=5, decay=1e-5)
     supermodel.compile(loss='binary_crossentropy', optimizer=adam_optimizer, metrics=['accuracy'])
     
@@ -216,8 +221,15 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
         x_test, y_test = datagen(d_train, d_test, gen_test = True)
         print("Training Fold number: ", num)
         num += 1
-        
-        ypred_arr = [model.predict(x_test) for model in members]
+        """
+        ypred_arr = []
+        for model in members:
+            pred = model.predict(x_test)
+            pred = [[1 if i > 0.5 else 0 for i in r] for r in pred] 
+            if float(gauge_acc(pred, y_test)) > 0.92:
+                ypred_arr.append(pred)
+
+        #ypred_arr = [model.predict(x_test) for model in members]
         for x in ypred_arr:
             x = [[1 if i > 0.5 else 0 for i in r] for r in x] 
             print("model "+ str(numod) +" used")
@@ -225,23 +237,23 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
             numod += 1
 
         numod = 0
-        """
+        
         yhat = array(ypred_arr)
         y_pred = np.mean(yhat, axis = 0)
         """
         inputX = [x_train[train] for i in range(num_models)]
         testX = [x_train[test] for i in range(num_models)]
         unseenX = [x_test for i in range(num_models)]
-        """
-        """
+      
+ 
         batch_size = 128
         epochs = 4
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(unseenX, y_test), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 2, restore_best_weights = True, mode = 'min')
         mc = ModelCheckpoint(model_name, monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only = True)
-        inputY = y_train[train]
-        #supermodel.fit(inputX, inputY, epochs=epochs, batch_size = batch_size, validation_data=(testX, y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
+    
+        supermodel.fit(inputX, inputY, epochs=epochs, batch_size = batch_size, validation_data=(testX, y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         
         y_pred = supermodel.predict(unseenX)
         print("Ensemble prediction: ")
@@ -264,7 +276,7 @@ if __name__ == "__main__":
     modelcat = []
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
 
-    model_name = "ensemble_complete1.h5"
+    model_name = "final_ensemble_complete.h5"
     model = classifier(model_name,emb_mean, emb_std, embeddings_index)
        
     

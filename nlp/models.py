@@ -258,7 +258,7 @@ def rcnn1(maxlen,max_features, embed_size, embedding_matrix):
     model = Model(inputs=comment, outputs=output)
     adam_optimizer = optimizers.Adam(lr=1e-3, clipvalue=5, decay=1e-5)
     model.compile(loss='binary_crossentropy', optimizer=adam_optimizer, metrics=['accuracy'])
-    model.summary()
+    #model.summary()
     return model
   
 
