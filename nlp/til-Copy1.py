@@ -40,16 +40,14 @@ import models
 
 import tensorflow as tf
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"  # Or 2, 3, etc. other than 0
 
+# On CPU/GPU placement
+config = tf.compat.v1.ConfigProto(allow_soft_placement=True, log_device_placement=True)
+config.gpu_options.allow_growth = True
+tf.compat.v1.Session(config=config)
 
 EMBEDDING_FILE = './input/word_embeddings.pkl'
-
-from tensorflow.compat.v1 import ConfigProto
-from tensorflow.compat.v1 import InteractiveSession
-
-config = ConfigProto()
-config.gpu_options.allow_growth = True
-session = InteractiveSession(config=config)
 
 def f1(y_pred0, y_test0):
     TP = 0.0
@@ -102,12 +100,12 @@ def extract_embed(fd):
 def schedule(ind):
     a = [0.001, 0.0005, 0.0001, 0.0001, 0.00005, 0.00005]
     return a[ind] 
+
 """
 def schedule(epochs):
-    ans = 0.001 * math.exp(-0.3*epochs)
+    ans = 0.001 * math.exp(-0.4*epochs)
     print("epochs: ", ans)
     return ans
-
 #straightfoward preprocess
 
 # %% [code] {"scrolled:true"}
@@ -150,9 +148,9 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
         
     print('preprocessing done')
 
-    model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
+    model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
 
-    num_folds = 18
+    num_folds = 30
     num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
@@ -160,7 +158,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     
         print("Training Fold number: ", num)
         batch_size = 128
-        epochs = 20
+        epochs = 25
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 5, restore_best_weights = True, mode = 'min')
@@ -183,8 +181,8 @@ if __name__ == "__main__":
     global embedding_index
     start = 0
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
-    while(start<5):
-        model = 'final_ensemble_rcnn_' + str(start) 
+    while(start<1):
+        model = 'original_ensemble_dpcnn_' + str(start) 
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1

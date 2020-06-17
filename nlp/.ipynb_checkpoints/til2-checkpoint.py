@@ -43,10 +43,13 @@ import tensorflow as tf
 
 
 EMBEDDING_FILE = './input/word_embeddings.pkl'
-s_model_file = 'model_cv1.json'
-model_file = 'model_cv.json'
-s_weights_file = 'model_cv1.h5'
-weights_file = 'model_cv.h5'
+
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
 
 def f1(y_pred0, y_test0):
     TP = 0.0
@@ -95,51 +98,20 @@ def extract_embed(fd):
         embeddings_index = pickle.load(f)
     all_embs = np.stack(embeddings_index.values())
     return all_embs.mean(), all_embs.std(), embeddings_index
-
-def _load_model():
-    # load json and create model
-    json_file = open(model_file, 'r')
-    loaded_model_json = json_file.read()
-    json_file.close()
-    model = model_from_json(loaded_model_json)
-    # load weights into new model
-    model.load_weights(weights_file)
-    print("Old model: ", type(model))
-    
-    model.compile(loss='binary_crossentropy', 
-            optimizer=optimizers.Adam(),
-            metrics=['accuracy'])
-            
-    print("Loaded model from disk")
-    return model
-
-def _save_model(model):
-    model_json = model.to_json()
-    with open('model_cv1.json', 'w') as json_file:
-        json_file.write(model_json)
-    # serialize weights to HDF5
-    model.save_weights(s_weights_file)
-    print("Saved model to disk")
 """
 def schedule(ind):
-    a = [0.001, 0.0005, 0.0001, 0.0001]
+    a = [0.001, 0.0005, 0.0001, 0.0001, 0.00005, 0.00005]
     return a[ind] 
 """
-
-def schedule(epoch):
-    if epoch < 10:
-        return float(0.001)
-    else:
-        return float(0.001*math.exp(-0.3))
-
-
+def schedule(epochs):
+    ans = 0.001 * math.exp(-0.3*epochs)
+    print("epochs: ", ans)
+    return ans
 
 #straightfoward preprocess
 
-
-
 # %% [code] {"scrolled:true"}
-def classifier(model, emb_mean, emb_std, embeddings_index):
+def classifier(model_name, emb_mean, emb_std, embeddings_index):
     train = pd.read_csv('./input/TIL_NLP_train1_dataset.csv')
     test = pd.read_csv('./input/TIL_NLP_unseen_dataset.csv')
     print('running classifier')
@@ -149,6 +121,7 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     maxlen = 200
     embed_size = 100
     train = shuffle(train)
+    test = shuffle(test)
     X_train = train["word_representation"].fillna("fillna").values
     y_train = train[["outwear", "top", "trousers", "women dresses", "women skirts"]].values
     X_test = test["word_representation"].fillna("fillna").values    
@@ -177,19 +150,9 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         
     print('preprocessing done')
 
-    # session_conf = tf.ConfigProto(intra_op_parallelism_threads=4, inter_op_parallelism_threads=4)
-    # K.set_session(tf.Session(graph=tf.get_default_graph(), config=session_conf))
-
-    #model
-    #wrote out all the blocks instead of looping for simplicity
-
-
     model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
-    #model.load_weights('best_model_dpcnnrcnn.h5')
-    print(type(model))
-    #model = models.DPCNN(maxlen, max_features, embed_size, embedding_matrix)
-   
-    num_folds = 15
+
+    num_folds = 18
     num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
@@ -197,14 +160,13 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
     
         print("Training Fold number: ", num)
         batch_size = 128
-        epochs = 4
+        epochs = 20
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
-        es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 3, restore_best_weights = True, mode = 'min')
-        mc = ModelCheckpoint('best_model_dpcnnrcnn_1.h5', monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only = True)
+        es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 5, restore_best_weights = True, mode = 'min')
+        mc = ModelCheckpoint(model_name, monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only=True)
         model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
-        
         
         y_pred = model.predict(x_test)
         y_pred = [[1 if i > 0.5 else 0 for i in r] for r in y_pred]
@@ -213,12 +175,6 @@ def classifier(model, emb_mean, emb_std, embeddings_index):
         print([y_pred[i] == y_test[i] for i in range(len(y_pred))])
         print(accuracy, "%")
         print(f1(y_pred, y_test))
-        
-        """
-        submission = pd.read_csv('../input/jigsaw-toxic-comment-classification-challenge/sample_submission.csv')
-        submission[["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]] = y_pred
-        submission.to_csv('dpcnn_test_preds.csv', index=False)
-        """
     
     return model
 
@@ -227,8 +183,8 @@ if __name__ == "__main__":
     global embedding_index
     start = 0
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
-    while(start<1):
-        model = load_model('best_model.h5')
+    while(start<5):
+        model = 'final_ensemble_rcnn_' + str(start) 
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
