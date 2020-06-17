@@ -91,10 +91,15 @@ def extract_embed(fd):
         embeddings_index = pickle.load(f)
     all_embs = np.stack(embeddings_index.values())
     return all_embs.mean(), all_embs.std(), embeddings_index
-
+"""
 def schedule(ind):
     a = [0.001, 0.0005, 0.0001, 0.0001, 0.00005, 0.00005]
     return a[ind] 
+"""
+def schedule(epochs):
+    ans = 0.001 * math.exp(-0.3*epochs)
+    print("epochs: ", ans)
+    return ans
 
 #straightfoward preprocess
 
@@ -140,7 +145,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
 
     model = models.rcnn1(maxlen, max_features, embed_size, embedding_matrix)
 
-    num_folds = 8
+    num_folds = 25
     num = 0
     kfold = KFold(n_splits=num_folds, shuffle=True)
     
@@ -148,7 +153,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
     
         print("Training Fold number: ", num)
         batch_size = 128
-        epochs = 6
+        epochs = 20
         lr = callbacks.LearningRateScheduler(schedule)
         ra_val = RocAucEvaluation(validation_data=(x_train[test], y_train[test]), interval = 1)
         es = EarlyStopping(monitor = 'val_loss', verbose = 1, patience = 2, restore_best_weights = True, mode = 'min')
@@ -169,10 +174,10 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
 # %% [code] {"scrolled:true"}
 if __name__ == "__main__":
     global embedding_index
-    start = 0
+    start = 1
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
-    while(start<5):
-        model = 'ensemble_rcnn_' + str(start) 
+    while(start<2):
+        model = 'test_ensemble_rcnn_' + str(start) 
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1

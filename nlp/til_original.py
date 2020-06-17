@@ -343,9 +343,18 @@ if __name__ == "__main__":
     start = 0
     
     while(start<5):
-        print("--------------2---------------")
+        print("--------------3---------------")
       
         model = 'test_ensemble_dpcnn_1'
+        model = classifier(model,emb_mean, emb_std, embeddings_index)
+        #_save_model(model)
+        start = start + 1
+    start = 0
+    
+    while(start<5):
+        print("--------------2---------------")
+      
+        model = 'test_ensemble_dpcnn_2'
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
