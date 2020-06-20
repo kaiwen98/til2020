@@ -208,23 +208,32 @@ def rcnn(maxlen,max_features, embed_size, embedding_matrix):
 
     comment = Input(shape = (maxlen,))
     embedding_comment = Embedding(max_features, embed_size, input_length = maxlen, weights=[embedding_matrix], trainable=train_embed)(comment)
-    x_context = Bidirectional(GRU(128, return_sequences=True))(embedding_comment)
-    x = Concatenate()([embedding_comment, x_context])
-    convs = []
-    for kernel_size in [1,2,3,4,5]:
-        conv = Conv1D(64, kernel_size = 3, activation = 'relu')(x)
-        convs.append(conv)
-    poolings = [GlobalAveragePooling1D()(conv) for conv in convs] + [GlobalMaxPooling1D()(conv) for conv in convs]
-    x = Concatenate()(poolings)
-    output = Dense(5, activation = "softmax")(x)
-    mirrored_strategy = tf.distribute.MirroredStrategy()
+    embedding_comment = SpatialDropout1D(0.2)(embedding_comment)
+    rnn_1 = Bidirectional(LSTM(64, return_sequences=True))(embedding_comment)
 
-    with mirrored_strategy.scope():
-        model = Model(comment, output)
-        model.compile(loss='binary_crossentropy', 
-        optimizer=optimizers.Adam(),
-        metrics=['accuracy'])
-    #print(model.summary())
+    conv_2 = Conv1D(128, 2, kernel_initializer="normal", padding="valid", activation="relu", strides=1)(rnn_1)
+    maxpool = GlobalMaxPooling1D()(conv_2)
+    attn = Lambda(lambda t: AttentionWeightedAverage()(t))(conv_2)
+    attn = Lambda(lambda t: K.sum(t, axis=1))(attn)
+    average = GlobalAveragePooling1D()(conv_2)
+
+    concatenated = Concatenate(axis = 1)([maxpool, attn, average])
+    """
+    x = Dropout(0.5)(concatenated)
+    x = Dense(120, activation="relu")(x)
+    output_layer = Dense(5, activation="sigmoid")(x)
+    """
+    output = Dropout(0.2)(concatenated)
+    output = Dense(256, activation='linear')(output)
+    output = BatchNormalization()(output)
+    output = PReLU()(output)
+    output = Dropout(0.2)(output)
+    output = Dense(5, activation='sigmoid')(output)
+
+    model = Model(inputs=comment, outputs=output)
+    adam_optimizer = optimizers.Adam(lr=1e-3, clipvalue=5, decay=1e-5)
+    model.compile(loss='binary_crossentropy', optimizer=adam_optimizer, metrics=['accuracy'])
+    #model.summary()
     return model
 
 

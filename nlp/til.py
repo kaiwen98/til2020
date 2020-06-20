@@ -105,7 +105,7 @@ def schedule(epochs):
 
 # %% [code] {"scrolled:true"}
 def classifier(model_name, emb_mean, emb_std, embeddings_index):
-    train = pd.read_csv('./input/TIL_NLP_train1_dataset.csv')
+    train = pd.read_csv('./input/TIL_NLP_train_dataset.csv')
     test = pd.read_csv('./input/TIL_NLP_unseen_dataset.csv')
     print('running classifier')
 
@@ -160,7 +160,7 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
         mc = ModelCheckpoint(model_name, monitor='val_loss', mode='min', verbose=1, save_best_only= True, save_weights_only=True)
         model.fit(x_train[train], y_train[train], batch_size=batch_size, epochs=epochs, validation_data=(x_train[test], y_train[test]), callbacks = [lr, ra_val, es, mc] ,verbose = 1)
         num += 1
-        
+        """
         y_pred = model.predict(x_test)
         y_pred = [[1 if i > 0.5 else 0 for i in r] for r in y_pred]
         
@@ -168,16 +168,17 @@ def classifier(model_name, emb_mean, emb_std, embeddings_index):
         print([y_pred[i] == y_test[i] for i in range(len(y_pred))])
         print(accuracy, "%")
         print(f1(y_pred, y_test))
+        """
     
     return model
 
 # %% [code] {"scrolled:true"}
 if __name__ == "__main__":
     global embedding_index
-    start = 0
+    start = 5
     emb_mean, emb_std, embeddings_index = extract_embed(EMBEDDING_FILE)
-    while(start<5):
-        model = 'final_ensemble_dpcnn_' + str(start) 
+    while(start<11):
+        model = 'final1_ensemble_dpcnn_' + str(start) 
         model = classifier(model,emb_mean, emb_std, embeddings_index)
         #_save_model(model)
         start = start + 1
